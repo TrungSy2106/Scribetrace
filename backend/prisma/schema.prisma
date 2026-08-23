@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SessionState {
+  ACTIVE
+  INACTIVE
+  ENDED
+  STALE
+}
+
+enum SessionEndReason {
+  PAGE_LEAVE
+  TIMEOUT
+}
+
+enum ReadingEventType {
+  PAGE_ENTER
+  PAGE_ACTIVE
+  PAGE_INACTIVE
+  PAGE_LEAVE
+}
+
+model AdminUser {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.Text
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("admin_users")
+}
+
+model Website {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(100)
+  domain    String    @unique @db.VarChar(255)
+  isEnabled Boolean   @default(true) @map("is_enabled")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  articles Article[]
+
+  @@map("websites")
+}
+
+model Article {
+  id            String    @id @default(uuid()) @db.Uuid
+  websiteId     String    @map("website_id") @db.Uuid
+  url           String    @db.Text
+  normalizedUrl String    @map("normalized_url") @db.Text
+  title         String    @db.Text
+  content       String    @db.Text
+  summary       String?   @db.Text
+  firstSeenAt   DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz(3)
+  lastSeenAt    DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  website  Website          @relation(fields: [websiteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sessions ReadingSession[]
+
+  @@unique([websiteId, normalizedUrl])
+  @@index([websiteId])
+  @@map("articles")
+}
+
+model ReadingSession {
+  id               String            @id @default(uuid()) @db.Uuid
+  articleId        String            @map("article_id") @db.Uuid
+  browserTabId     Int?              @map("browser_tab_id")
+  browserWindowId  Int?              @map("browser_window_id")
+  startedAt        DateTime          @map("started_at") @db.Timestamptz(3)
+  endedAt          DateTime?         @map("ended_at") @db.Timestamptz(3)
+  currentState     SessionState      @default(ACTIVE) @map("current_state")
+  activeReadingMs  BigInt            @default(0) @map("active_reading_ms")
+  inactiveMs       BigInt            @default(0) @map("inactive_ms")
+  lastEventAt      DateTime?         @map("last_event_at") @db.Timestamptz(3)
+  endReason        SessionEndReason? @map("end_reason")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  article Article        @relation(fields: [articleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  events  ReadingEvent[]
+
+  @@index([articleId, startedAt])
+  @@index([startedAt])
+  @@index([currentState, lastEventAt])
+  @@map("reading_sessions")
+}
+
+model ReadingEvent {
+  id         String           @id @default(uuid()) @db.Uuid
+  sessionId  String           @map("session_id") @db.Uuid
+  eventType  ReadingEventType @map("event_type")
+  clientSeq  Int              @map("client_seq")
+  occurredAt DateTime         @map("occurred_at") @db.Timestamptz(3)
+  receivedAt DateTime         @default(now()) @map("received_at") @db.Timestamptz(3)
+  metadata   Json?
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session ReadingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([sessionId, clientSeq])
+  @@index([occurredAt])
+  @@map("reading_events")
+}
