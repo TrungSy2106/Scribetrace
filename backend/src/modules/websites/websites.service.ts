@@ -7,6 +7,19 @@ import { UpdateWebsiteDto } from './dto/update-website.dto';
 export class WebsitesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  findTracked() {
+    return this.prisma.website.findMany({
+      where: { isEnabled: true },
+      orderBy: { name: 'asc' },
+      select: {
+        name: true,
+        domain: true,
+        titleSelector: true,
+        contentSelector: true,
+      },
+    });
+  }
+
   findAll() {
     return this.prisma.website.findMany({ orderBy: { name: 'asc' } });
   }
@@ -20,7 +33,12 @@ export class WebsitesService {
     }
 
     return this.prisma.website.create({
-      data: { name: data.name, domain },
+      data: {
+        name: data.name,
+        domain,
+        titleSelector: data.titleSelector?.trim() || null,
+        contentSelector: data.contentSelector?.trim() || null,
+      },
     });
   }
 
@@ -42,7 +60,18 @@ export class WebsitesService {
 
     return this.prisma.website.update({
       where: { id },
-      data: { ...data, domain },
+      data: {
+        ...data,
+        domain,
+        titleSelector:
+          data.titleSelector === undefined
+            ? undefined
+            : data.titleSelector?.trim() || null,
+        contentSelector:
+          data.contentSelector === undefined
+            ? undefined
+            : data.contentSelector?.trim() || null,
+      },
     });
   }
 

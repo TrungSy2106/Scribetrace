@@ -4,21 +4,28 @@ import { CreateWebsiteDto } from './dto/create-website.dto';
 import { UpdateWebsiteDto } from './dto/update-website.dto';
 import { WebsitesService } from './websites.service';
 
-@UseGuards(JwtAuthGuard)
 @Controller('websites')
 export class WebsitesController {
   constructor(private readonly websitesService: WebsitesService) {}
 
+  @Get('tracked')
+  findTracked() {
+    return this.websitesService.findTracked();
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
     return this.websitesService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() body: CreateWebsiteDto) {
     return this.websitesService.create(body);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,

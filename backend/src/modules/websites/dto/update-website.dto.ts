@@ -14,4 +14,14 @@ export class UpdateWebsiteDto {
   @IsOptional()
   @IsBoolean()
   isEnabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  titleSelector?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  contentSelector?: string | null;
 }
