@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="header">
+      <h1>ScribeTrace</h1>
+      <p>Your news reading companion</p>
+    </div>
+
+    <div class="current-tab">
+      <h3>Current article</h3>
+      <div class="tab-info" id="currentTabInfo">Loading...</div>
+      <div class="reading-row">
+        <span id="readingState">--</span>
+        <strong id="activeTime">0m 0s</strong>
+      </div>
+    </div>
+
+    <div class="status">
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Checking sync status...</span>
+      </div>
+      <div class="status-details" id="statusDetails"></div>
+    </div>
+
+    <div class="footer">Make every minute of reading count.</div>
+    <script src="popup.js"></script>
+  </body>
+</html>
