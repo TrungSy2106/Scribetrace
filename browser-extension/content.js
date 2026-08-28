@@ -18,10 +18,14 @@
     });
   }
 
-  function resetReadingTimer() {
+  function resetReadingTimer(notify = true) {
     clearTimeout(readingTimer);
 
-    setReadingActive(true);
+    if (notify) {
+      setReadingActive(true);
+    } else {
+      readingActive = true;
+    }
 
     readingTimer = setTimeout(() => {
       setReadingActive(false);
@@ -262,7 +266,7 @@
   document.addEventListener('visibilitychange', () => {
     if (started) {
       if (!document.hidden) {
-        resetReadingTimer();
+        resetReadingTimer(false);
       }
 
       chrome.runtime.sendMessage({

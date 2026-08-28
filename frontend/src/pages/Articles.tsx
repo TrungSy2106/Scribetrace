@@ -99,7 +99,7 @@ export default function Articles() {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)", background: "#111113" }}>
-                {["Title", "Domain", "URL", "Read Time", "Last Read", "Status"].map((label) => (
+                {["Title", "Domain", "URL", "Read Time", "Last Read"].map((label) => (
                   <th key={label} className="px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>{label}</th>
                 ))}
               </tr>
@@ -113,7 +113,10 @@ export default function Articles() {
                   style={{ borderBottom: index < articles.length - 1 ? "1px solid var(--border)" : undefined }}
                 >
                   <td className="px-4 py-3 max-w-[260px]">
-                    <span className="text-[12px] line-clamp-1 font-medium" style={{ color: "var(--foreground)" }}>{article.title}</span>
+                    <div className="flex items-center gap-2">
+                      {article.isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-400 animate-pulse" />}
+                      <span className="text-[12px] line-clamp-1 font-medium" style={{ color: "var(--foreground)" }}>{article.title}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-[11px]" style={{ color: "var(--muted-foreground)" }}>{article.website.domain}</td>
                   <td className="px-4 py-3 max-w-[220px]">
@@ -131,12 +134,6 @@ export default function Articles() {
                   </td>
                   <td className="px-4 py-3 font-mono text-[12px]" style={{ color: "var(--foreground)" }}>{formatDuration(article.totalReadingMs)}</td>
                   <td className="px-4 py-3 font-mono text-[11px]" style={{ color: "var(--muted-foreground)" }}>{formatDateTime(article.latestReadingAt)}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: article.isActive ? "#14280e" : "#1c1c1f", color: article.isActive ? "#4ade80" : "#71717a" }}>
-                      {article.isActive && <span className="w-1.5 h-1.5 rounded-full bg-green-400" />}
-                      {article.isActive ? "ACTIVE" : "DONE"}
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>

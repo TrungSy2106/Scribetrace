@@ -395,6 +395,10 @@ async function setPageVisibility(tabId, visible) {
 
   session.pageVisible = visible;
 
+  if (visible) {
+    session.readingActive = true;
+  }
+
   await saveSessions(tabSessions);
   await evaluateReadingState(tabId);
 }
@@ -533,7 +537,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await checkpointSessions();
 });
 
-chrome.tabs.onActivated.addListener(async () => {
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  await setPageVisibility(tabId, true);
   await reevaluateAllSessions();
 });
 

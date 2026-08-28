@@ -79,10 +79,11 @@ export default function ArticleDetail() {
           <div className="rounded-lg border p-5" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
             <div className="flex items-start justify-between gap-3 mb-3">
               <span className="font-mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#1d2d3e", color: "#60a5fa" }}>{article.website.domain}</span>
-              <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: article.isActive ? "#14280e" : "#1c1c1f", color: article.isActive ? "#4ade80" : "#71717a" }}>
-                {article.isActive && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                {article.isActive ? "ACTIVE" : "DONE"}
-              </span>
+              {article.isActive && (
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#14280e", color: "#4ade80" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />ACTIVE
+                </span>
+              )}
             </div>
             <h1 className="text-[17px] font-semibold leading-snug mb-3">{article.title}</h1>
             <div className="flex items-center gap-4 flex-wrap">
