@@ -97,10 +97,21 @@ export default function Dashboard() {
         date: new Date(`${item.date}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" }),
         readingMinutes: Math.round((item.totalReadingMs / 60000) * 10) / 10,
       })));
-      setByWebsite(websiteData.map((item) => ({
+      const sortedWebsites = [...websiteData].sort((a, b) => b.totalReadingMs - a.totalReadingMs);
+      const topWebsites = sortedWebsites.slice(0, 5).map((item) => ({
         name: item.name,
         readingMinutes: Math.round((item.totalReadingMs / 60000) * 10) / 10,
-      })));
+      }));
+      const remainingWebsites = sortedWebsites.slice(5);
+
+      if (remainingWebsites.length) {
+        topWebsites.push({
+          name: "Others",
+          readingMinutes: Math.round((remainingWebsites.reduce((sum, item) => sum + item.totalReadingMs, 0) / 60000) * 10) / 10,
+        });
+      }
+
+      setByWebsite(topWebsites);
       setArticles(articleData.data);
       setError("");
     } catch {
@@ -171,7 +182,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={byWebsite} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
               <XAxis type="number" tick={{ fontSize: 10, fill: "#71717a" }} tickLine={false} axisLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#a1a1aa" }} tickLine={false} axisLine={false} width={70} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#a1a1aa" }} tickLine={false} axisLine={false} width={90} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="readingMinutes" name="Minutes" fill="#3b82f6" radius={[0, 3, 3, 0]} />
             </BarChart>

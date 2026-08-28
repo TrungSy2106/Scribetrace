@@ -35,6 +35,28 @@ function WebsiteModal({ website, onClose, onSaved }: { website?: Website; onClos
     }
   }
 
+  async function handleRemoveConfig() {
+    if (!website) return;
+
+    setLoading(true);
+    setError("");
+    try {
+      const saved = await request<Website>(`/websites/${website.id}`, {
+        method: "PATCH",
+        body: {
+          titleSelector: null,
+          contentSelector: null,
+        },
+      });
+      onSaved(saved);
+      onClose();
+    } catch {
+      setError("Unable to remove configuration.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-sm rounded-lg border" style={{ background: "var(--card)", borderColor: "var(--border)" }} onClick={(event) => event.stopPropagation()}>
@@ -60,6 +82,9 @@ function WebsiteModal({ website, onClose, onSaved }: { website?: Website; onClos
             <input value={contentSelector} onChange={(event) => setContentSelector(event.target.value)} placeholder="article .content" className="w-full px-3 py-2 rounded text-[13px] outline-none font-mono" style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }} />
           </div>
           {error && <p className="text-[12px]" style={{ color: "#f87171" }}>{error}</p>}
+          {website && (website.titleSelector || website.contentSelector) && (
+            <button type="button" onClick={handleRemoveConfig} disabled={loading} className="w-full py-2 rounded text-[12px] disabled:opacity-50" style={{ border: "1px solid #7f1d1d", color: "#f87171" }}>Remove Configuration</button>
+          )}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2 rounded text-[12px]" style={{ border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>Cancel</button>
             <button type="submit" disabled={loading} className="flex-1 py-2 rounded text-[12px] font-medium disabled:opacity-50" style={{ background: "var(--primary)", color: "white" }}>{loading ? "Saving..." : "Save"}</button>

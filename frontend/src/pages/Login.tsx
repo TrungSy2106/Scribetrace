@@ -52,15 +52,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Admin notice */}
-        <div
-          className="flex items-start gap-2.5 px-3.5 py-3 rounded mb-5 text-[12px]"
-          style={{ background: "#1a1508", border: "1px solid #422006", color: "#fbbf24" }}
-        >
-          <ShieldAlert size={14} className="mt-0.5 flex-shrink-0" />
-          <span>Trang này chỉ dành cho quản trị viên hệ thống. Nếu bạn không có quyền truy cập, vui lòng liên hệ bộ phận kỹ thuật.</span>
-        </div>
-
         {/* Form */}
         <form
           onSubmit={handleSubmit}
