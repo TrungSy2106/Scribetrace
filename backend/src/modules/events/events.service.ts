@@ -126,12 +126,34 @@ export class EventsService {
       }
 
       const normalizedUrl = this.normalizeUrl(data.page.url);
+      const articleKey = {
+        websiteId: website.id,
+        normalizedUrl,
+      };
+      const existingArticle = await tx.article.findUnique({
+        where: {
+          websiteId_normalizedUrl: articleKey,
+        },
+        select: {
+          title: true,
+          content: true,
+        },
+      });
+      const incomingTitle = data.page.title.trim();
+      const incomingContent = data.page.content.trim();
+      const shouldUpdateTitle =
+        existingArticle !== null &&
+        existingArticle.title.trim().length < 5 &&
+        incomingTitle.length >= 5;
+      const shouldUpdateContent =
+        existingArticle !== null &&
+        incomingContent.length >= 100 &&
+        (existingArticle.content.trim().length < 100 ||
+          (!existingArticle.content.includes('\n') &&
+            incomingContent.includes('\n')));
       const article = await tx.article.upsert({
         where: {
-          websiteId_normalizedUrl: {
-            websiteId: website.id,
-            normalizedUrl,
-          },
+          websiteId_normalizedUrl: articleKey,
         },
         create: {
           websiteId: website.id,
@@ -142,6 +164,8 @@ export class EventsService {
         },
         update: {
           lastSeenAt: occurredAt,
+          ...(shouldUpdateTitle && { title: data.page.title }),
+          ...(shouldUpdateContent && { content: data.page.content }),
         },
       });
 

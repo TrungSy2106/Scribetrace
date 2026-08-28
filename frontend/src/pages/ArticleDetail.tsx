@@ -63,6 +63,10 @@ export default function ArticleDetail() {
   const selectedSessionIndex = selectedSession ? article.sessions.findIndex((session) => session.id === selectedSession.id) : -1;
   const selectedSessionNumber = selectedSession ? article.sessions.length - selectedSessionIndex : 0;
   const selectedStateColor = selectedSession ? SESSION_COLORS[selectedSession.currentState] : null;
+  const contentParagraphs = article.content
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
 
   return (
     <Layout title="Article Detail">
@@ -104,8 +108,9 @@ export default function ArticleDetail() {
 
           <div className="rounded-lg border p-5" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
             <h3 className="text-[12px] font-semibold uppercase tracking-wide mb-4" style={{ color: "var(--muted-foreground)" }}>Article Content</h3>
-            <div className="text-[13px] leading-relaxed space-y-3">
-              {article.content.split(/\n+/).filter(Boolean).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+            <div className="mx-auto max-w-[78ch] space-y-4 text-[14px] leading-7" style={{ color: "#d4d4d8" }}>
+              {contentParagraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+              {!contentParagraphs.length && <p style={{ color: "var(--muted-foreground)" }}>Content could not be extracted.</p>}
             </div>
           </div>
         </div>

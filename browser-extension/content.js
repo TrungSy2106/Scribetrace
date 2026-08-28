@@ -1,5 +1,32 @@
 (() => {
   let started = false;
+  const READING_TIMEOUT_MS = 45_000;
+
+  let readingTimer = null;
+  let readingActive = false;
+
+  function setReadingActive(active) {
+    if (readingActive === active) {
+      return;
+    }
+
+    readingActive = active;
+
+    chrome.runtime.sendMessage({
+      type: 'PAGE_READING_STATE',
+      active,
+    });
+  }
+
+  function resetReadingTimer() {
+    clearTimeout(readingTimer);
+
+    setReadingActive(true);
+
+    readingTimer = setTimeout(() => {
+      setReadingActive(false);
+    }, READING_TIMEOUT_MS);
+  }
 
   function isOriginPage(url) {
     return new URL(url).pathname.replace(/\/+$/, '') === '';
@@ -82,28 +109,64 @@
     });
   }
 
-  function copyShadowRoots(source, target, targetDocument) {
-    const sourceElements = [...source.querySelectorAll('*')];
-    const targetElements = [...target.querySelectorAll('*')];
+  function copyShadowContentIntoClone(sourceRoot, clonedRoot) {
+    const sourceElements = [...sourceRoot.querySelectorAll('*')];
+    const clonedElements = [...clonedRoot.querySelectorAll('*')];
 
-    sourceElements.forEach((element, index) => {
-      if (!element.shadowRoot || !targetElements[index]) {
+    sourceElements.forEach((sourceElement, index) => {
+      const shadowRoot = sourceElement.shadowRoot;
+      const clonedElement = clonedElements[index];
+
+      if (!shadowRoot || !clonedElement) {
         return;
       }
 
-      const container = targetDocument.createElement('div');
-      element.shadowRoot.childNodes.forEach(node => {
-        container.appendChild(node.cloneNode(true));
+      const clonedDocument = clonedElement.ownerDocument || clonedRoot;
+      const shadowContainer = clonedDocument.createElement('div');
+
+      shadowRoot.childNodes.forEach(node => {
+        shadowContainer.appendChild(node.cloneNode(true));
       });
-      targetElements[index].appendChild(container);
-      copyShadowRoots(element.shadowRoot, container, targetDocument);
+
+      clonedElement.appendChild(shadowContainer);
+
+      copyShadowContentIntoClone(shadowRoot, shadowContainer);
     });
   }
 
   function cloneDocument() {
-    const clone = document.cloneNode(true);
-    copyShadowRoots(document, clone, clone);
-    return clone;
+    const clonedDocument = document.cloneNode(true);
+
+    copyShadowContentIntoClone(document, clonedDocument);
+
+    return clonedDocument;
+  }
+
+  function normalizeInlineText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function extractTextContent(root) {
+    if (!root) {
+      return '';
+    }
+
+    const selector = 'p, h2, h3, h4, blockquote, pre';
+    const blocks = [...root.querySelectorAll(selector)]
+      .filter(element => !element.querySelector(selector))
+      .map(element => normalizeInlineText(element.textContent))
+      .filter(Boolean);
+
+    if (blocks.length) {
+      return blocks.join('\n\n');
+    }
+
+    return String(root.innerText || root.textContent || '')
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      .map(normalizeInlineText)
+      .filter(Boolean)
+      .join('\n\n');
   }
 
   function extractConfiguredArticle(config) {
@@ -113,10 +176,8 @@
     try {
       const titleElement = document.querySelector(config.titleSelector);
       const contentElement = document.querySelector(config.contentSelector);
-      title = String(titleElement?.textContent || '').trim();
-      content = String(
-        contentElement?.innerText || contentElement?.textContent || '',
-      ).replace(/\s+/g, ' ').trim();
+      title = normalizeInlineText(titleElement?.textContent);
+      content = extractTextContent(contentElement);
     } catch {}
 
     return { article: { title }, content };
@@ -129,7 +190,16 @@
 
     try {
       const article = new Readability(cloneDocument()).parse();
-      const content = String(article?.textContent || '').replace(/\s+/g, ' ').trim();
+
+      if (!article) {
+        return null;
+      }
+
+      const articleElement = document.createElement('div');
+      articleElement.innerHTML = article.content || '';
+      article.title = normalizeInlineText(article.title);
+      const content = extractTextContent(articleElement);
+
       return looksLikeArticle(article, content) ? { article, content } : null;
     } catch {
       return null;
@@ -175,10 +245,26 @@
       },
       visible: !document.hidden,
     });
+
+    resetReadingTimer();
   }
+
+  function handleReadingActivity() {
+    if (started) {
+      resetReadingTimer();
+    }
+  }
+
+  window.addEventListener('scroll', handleReadingActivity, { passive: true });
+  window.addEventListener('pointerdown', handleReadingActivity, { passive: true });
+  window.addEventListener('keydown', handleReadingActivity);
 
   document.addEventListener('visibilitychange', () => {
     if (started) {
+      if (!document.hidden) {
+        resetReadingTimer();
+      }
+
       chrome.runtime.sendMessage({
         type: 'PAGE_VISIBILITY',
         visible: !document.hidden,

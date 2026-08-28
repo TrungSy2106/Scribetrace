@@ -6,8 +6,6 @@ const DEFAULT_WEBSITES = [
   { name: 'Tuổi Trẻ', domain: 'tuoitre.vn' },
 ];
 
-const IDLE_THRESHOLD_SECONDS = 120;
-
 async function getStorage(keys) {
   return chrome.storage.local.get(keys);
 }
@@ -219,18 +217,6 @@ function updateLocalTime(session) {
   }
 }
 
-async function getIdleState() {
-  if (!chrome.idle?.queryState) {
-    return 'active';
-  }
-
-  try {
-    return await chrome.idle.queryState(IDLE_THRESHOLD_SECONDS);
-  } catch {
-    return 'active';
-  }
-}
-
 async function transitionReadingState(tabId, shouldBeActive) {
   const tabSessions = await getSessions();
   const session = tabSessions[tabId];
@@ -288,9 +274,11 @@ async function evaluateReadingState(tabId) {
     return;
   }
 
-  const idleState = await getIdleState();
-
-  const isReading = tab.active === true && browserWindow.focused === true && session.pageVisible === true && idleState === 'active';
+  const isReading =
+    tab.active === true &&
+    browserWindow.focused === true &&
+    session.pageVisible === true &&
+    session.readingActive === true;
 
   await transitionReadingState(Number(tabId), isReading);
 }
@@ -352,6 +340,7 @@ async function startSession(tabId, windowId, page, visible) {
     current.pageVisible = visible;
     current.title = page.title;
     current.domain = page.domain;
+    current.readingActive = true;
 
     await saveSessions(tabSessions);
     await evaluateReadingState(tabId);
@@ -375,6 +364,7 @@ async function startSession(tabId, windowId, page, visible) {
     activeReadingMs: 0,
     activeSince: Date.now(),
     pageVisible: visible,
+    readingActive: true,
     lastObservedAt: Date.now(),
   };
 
@@ -404,6 +394,20 @@ async function setPageVisibility(tabId, visible) {
   }
 
   session.pageVisible = visible;
+
+  await saveSessions(tabSessions);
+  await evaluateReadingState(tabId);
+}
+
+async function setReadingActive(tabId, active) {
+  const tabSessions = await getSessions();
+  const session = tabSessions[tabId];
+
+  if (!session) {
+    return;
+  }
+
+  session.readingActive = active;
 
   await saveSessions(tabSessions);
   await evaluateReadingState(tabId);
@@ -480,22 +484,7 @@ async function getPopupState() {
   };
 }
 
-function configureIdleDetection() {
-  if (chrome.idle?.setDetectionInterval) {
-    try {
-      chrome.idle.setDetectionInterval(
-        IDLE_THRESHOLD_SECONDS,
-      );
-    } catch {
-    }
-  }
-}
-
-configureIdleDetection();
-
 chrome.runtime.onInstalled.addListener(async () => {
-  configureIdleDetection();
-
   const stored = await getStorage([
     'pendingEvents',
     'tabSessions',
@@ -517,8 +506,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  configureIdleDetection();
-
   chrome.alarms.create('sync', {
     periodInMinutes: 1,
   });
@@ -553,12 +540,6 @@ chrome.tabs.onActivated.addListener(async () => {
 chrome.windows.onFocusChanged.addListener(async () => {
   await reevaluateAllSessions();
 });
-
-if (chrome.idle?.onStateChanged) {
-  chrome.idle.onStateChanged.addListener(async () => {
-    await reevaluateAllSessions();
-  });
-}
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   finishSession(tabId);
@@ -608,6 +589,22 @@ chrome.runtime.onMessage.addListener(
         await setPageVisibility(
           sender.tab.id,
           message.visible,
+        );
+
+        sendResponse({
+          success: true,
+        });
+
+        return;
+      }
+
+      if (
+        message.type === 'PAGE_READING_STATE' &&
+        sender.tab
+      ) {
+        await setReadingActive(
+          sender.tab.id,
+          message.active,
         );
 
         sendResponse({
